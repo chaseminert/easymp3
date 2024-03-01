@@ -1,5 +1,7 @@
+import enum
 import mimetypes
 import os
+from enum import Enum
 
 from mutagen.easyid3 import EasyID3
 from mutagen.id3 import ID3, APIC
@@ -9,53 +11,66 @@ from mutagen.mp4 import MP4, MP4Cover
 from keys import MP3Keys, M4AKeys
 
 
+class AudioType(Enum):
+    MP3 = enum.auto()
+    M4A = enum.auto()
+
+
 class EasyMP3:
 
     def __init__(self, directory):
-        self._mp3_list: list[EasyID3] = []
-        self._m4a_list: list[MP4] = []
+        self._list: list[str] = []
         self._get_list(directory)
+
 
     def _get_list(self, directory):
         for file in os.listdir(directory):
             path = os.path.join(directory, file)
-            is_mp3 = file.endswith("mp3")
-            is_m4a = file.endswith("m4a")
-            if not is_mp3 and not is_m4a:
+            audio_type = EasyMP3._get_audio_type(path)
+            if audio_type != AudioType.MP3 and audio_type != AudioType.M4A:
                 continue
-            if is_mp3:
-                self._mp3_list.append(EasyID3(path))
-            elif is_m4a:
-                self._m4a_list.append(MP4(path))
-        self._combo_list = [self._mp3_list, self._m4a_list]
+            self._list.append(path)
 
     def _set_tag(self, keys, new_val_func):
-        for _list, key in zip(self._combo_list, keys):
-            for item in _list:
-                new_val = new_val_func(item)
-                item[key] = new_val
-                item: EasyID3
-                item.save()
+        mp3key, m4akey = keys
+        for path in self._list:
+            audio_type = EasyMP3._get_audio_type(path)
+            audio: EasyID3 | MP4 = EasyMP3._construct_audio_obj(audio_type, path)
+            if audio_type == AudioType.MP3:
+                key = mp3key
+            else:
+                key = m4akey
+            new_val = new_val_func(path)
+            audio[key] = new_val
+            audio.save()
 
-    def set_artist(self, new_artist):
-        keys = [MP3Keys.ARTIST, M4AKeys.ARTIST]
-        self._set_tag(keys, lambda: new_artist)
+    def set_artist_all(self, new_artist):
+        keys = (MP3Keys.ARTIST, M4AKeys.ARTIST)
+        self._set_tag(keys, lambda path: new_artist)
 
-    def set_album_artist(self, new_album_artist):
-        keys = [MP3Keys.ALBUMARTIST, M4AKeys.ALBUMARTIST]
-        self._set_tag(keys, lambda item: new_album_artist)
+    def set_album_artist_all(self, new_album_artist):
+        keys = (MP3Keys.ALBUMARTIST, M4AKeys.ALBUMARTIST)
+        self._set_tag(keys, lambda path: new_album_artist)
 
-    def set_album(self, new_album):
-        keys = [MP3Keys.ALBUM, M4AKeys.ALBUM]
-        self._set_tag(keys, lambda item: new_album)
+    def set_album_all(self, new_album):
+        keys = (MP3Keys.ALBUM, M4AKeys.ALBUM)
+        self._set_tag(keys, lambda path: new_album)
 
-    def set_title(self, new_title):
+    def set_title_all(self, new_title):
+        keys = (MP3Keys.TITLE, M4AKeys.TITLE)
+        self._set_tag(keys, lambda path: new_title)
+
+    def set_title_from_name_all(self):
         keys = [MP3Keys.TITLE, M4AKeys.TITLE]
-        self._set_tag(keys, lambda item: new_title)
+        self._set_tag(keys, lambda path: self._get_filename(path, extension=False))
 
-    def set_title_from_name(self):
-        keys = [MP3Keys.TITLE, M4AKeys.TITLE]
-        self._set_tag(keys, lambda item: self._get_filename(item.filename, extension=False))
+    def set_cover_art_from_file_all(self, covers_dir):
+        for path in self._list:
+            cover_path = EasyMP3._find_cover_from_file(path, covers_dir)
+            if cover_path is None:
+                print(f"Cover Not Found for: {path}")
+                continue
+            EasyMP3._set_art_from_file(path, cover_path)
 
     @staticmethod
     def _set_mp3_art_from_file(mp3_path: str, cover_path: str):
@@ -94,9 +109,43 @@ class EasyMP3:
         m4a_obj.save()
 
     @staticmethod
+    def _set_art_from_file(audio_path: str, cover_path: str):
+        audio_type = EasyMP3._get_audio_type(audio_path)
+        if audio_type == AudioType.MP3:
+            EasyMP3._set_mp3_art_from_file(audio_path, cover_path)
+        elif audio_type == AudioType.M4A:
+            EasyMP3._set_m4a_art_from_file(audio_path, cover_path)
+        else:
+            raise ValueError(f"File path: {audio_path} is invalid. Audio can only be mp3 or m4a")
+
+    @staticmethod
     def _get_filename(path: str, extension=True):
         base_name = os.path.basename(path)
         if extension:
             return base_name
         name_without_extension, _ = os.path.splitext(base_name)
         return name_without_extension
+
+    @staticmethod
+    def _get_audio_type(path: str):
+        if path.lower().endswith("mp3"):
+            return AudioType.MP3
+        elif path.lower().endswith("m4a"):
+            return AudioType.M4A
+
+    @staticmethod
+    def _construct_audio_obj(audio_type: AudioType, path):
+        if audio_type == AudioType.MP3:
+            return EasyID3(path)
+        else:
+            return MP4(path)
+
+    @staticmethod
+    def _find_cover_from_file(song_path: str, covers_dir: str):
+        song_name = EasyMP3._get_filename(song_path, extension=False)
+        for file in os.listdir(covers_dir):
+            file_no_extension = EasyMP3._get_filename(file, extension=False)
+            if file_no_extension.lower() == song_name.lower():
+                file_path = os.path.join(covers_dir, file)
+                return file_path
+        return None
