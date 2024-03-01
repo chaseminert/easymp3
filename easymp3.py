@@ -60,7 +60,7 @@ class EasyMP3:
         keys = (MP3Keys.TITLE, M4AKeys.TITLE)
         self._set_tag(keys, lambda path: new_title)
 
-    def set_title_from_name_all(self):
+    def set_title_from_file_all(self):
         keys = [MP3Keys.TITLE, M4AKeys.TITLE]
         self._set_tag(keys, lambda path: self._get_filename(path, extension=False))
 
