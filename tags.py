@@ -1,4 +1,6 @@
-class MP3Keys:
+from enum import Enum
+
+class Tags(Enum):
     ALBUM = 'album'
     BPM = 'bpm'
     COMPILATION = 'compilation'
@@ -55,63 +57,13 @@ class MP3Keys:
     ACOUSTID_FINGERPRINT = 'acoustid_fingerprint'
     ACOUSTID_ID = 'acoustid_id'
 
-class M4AKeys:
-    ARTIST = '\xa9ART'
-    ALBUM = '\xa9alb'
-    TITLE = '\xa9nam'
-    GENRE = '\xa9gen'
-    TRACKNUMBER = 'trkn'
-    ALBUMARTIST = 'aART'
-    COMPOSER = '\xa9wrt'
-    YEAR = '\xa9day'
-    COMMENT = '\xa9cmt'
-    ENCODED_BY = '\xa9too'
-    WRITER = '\xa9wrt'
-    COPYRIGHT = 'cprt'
-    DESCRIPTION = 'desc'
-    LYRICS = '\xa9lyr'
-    COVER_ART = 'covr'
-    BPM = 'tmpo'
-    RATING = 'rtng'
-    DISCNUMBER = 'disk'
-    COMPILATION = 'cpil'
-    ALBUMARTISTSORT = 'soaa'
-    ALBUMSORT = 'soal'
-    TITLESORT = 'sonm'
-    ARTISTSORT = 'soar'
-    COMPOSERSORT = 'soco'
-    SHOW = 'tvsh'
-    EPISODE_ID = 'tven'
-    NETWORK = 'tvnn'
-    EPISODE_SORT = 'snes'
-    SEASON = 'tvsn'
-    EPISODE = 'tves'
-    GROUPING = '\xa9grp'
-    PODCAST = 'pcst'
-    PODCAST_ID = 'egid'
-    CATEGORY = 'catg'
-    KEYWORD = 'keyw'
-    PODCAST_URL = 'purl'
-    PURCHASE_DATE = 'purd'
-    HD_VIDEO = 'hdvd'
-    MEDIA_TYPE = 'stik'
-    CONTENT_RATING = 'rtng'
-    GAPLESS_PLAYBACK = 'pgap'
-    iTUNES_ACCOUNT = 'apID'
-    iTUNES_ARTIST_ID = 'atID'
-    iTUNES_COMPOSER_ID = 'cmID'
-    iTUNES_CATALOG_ID = 'cnID'
-    iTUNES_COUNTRY_ID = 'sfID'
-    iTUNES_GENRE_ID = 'geID'
-    iTUNES_PLIST_ID = 'plID'
-    iTUNES_PROD_ID = 'prID'
-    iTUNES_SORT_ALBUM = 'soal'
-    iTUNES_SORT_ARTIST = 'soar'
-    iTUNES_SORT_ALBUM_ARTIST = 'soaa'
-    iTUNES_SORT_COMPOSER = 'soco'
-    iTUNES_SORT_NAME = 'sonm'
-    iTUNES_SORT_SHOW = 'sosn'
-    iTUNES_ACCOUNT_TYPE = 'akID'
-    iTUNES_ARTIST_SORT = 'sart'
-    iTUNES_SHOW_SORT = 'sosn'
-    iTUNES_EPISODE_SORT = 'sosn'
+def check_tag_key(tag_key: Tags | str):
+    try:
+        Tags(tag_key)
+        if isinstance(tag_key, str):
+            return tag_key
+        else:
+            return tag_key.value
+
+    except ValueError:
+        raise KeyError(f"Invalid key: {tag_key}")
