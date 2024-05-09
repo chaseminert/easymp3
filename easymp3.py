@@ -12,6 +12,8 @@ from tag import Tag
 
 class EasyMP3:
 
+    TITLE_FROM_FILE = util.filename_no_extension
+
     def __init__(self, directory: str, search_subfolders=True):
         """
         Initializes the EasyMP3 object with a list of paths to MP3 files.
@@ -26,7 +28,7 @@ class EasyMP3:
         Sets the title tag to the file name (excluding the extension) for all MP3 files in the directory.
         :return: None
         """
-        self._set_tag(Tag.TITLE, lambda path: util.filename_no_extension(path))
+        self._set_tag(Tag.TITLE, util.filename_no_extension)
 
     def remove_all_tags(self):
         """
@@ -62,7 +64,7 @@ class EasyMP3:
         """
         self._set_tag(tag_key, lambda path: value)
 
-    def set_tags(self, template: dict[Tag, str]):
+    def set_tags(self, template: dict[Tag, str | Callable]):
         """
         Sets multiple tags for mp3 files based on a template. If a key is invalid, it will be
         skipped and printed to stderr.
@@ -80,7 +82,12 @@ class EasyMP3:
             raise KeyError(f"All keys invalid for dictionary: {template}")
 
         for key, value in valid_tags_dict.items():
-            self._set_tag(key, lambda path: value, check=False)
+            if callable(value):
+                function = value
+            else:
+                function = lambda path: value
+
+            self._set_tag(key, function, check=False)
 
     def _set_tag(self, key: Tag, new_val_func: Callable[[str], str], check=True):
         """

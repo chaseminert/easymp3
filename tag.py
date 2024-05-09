@@ -59,6 +59,10 @@ class Tag(Enum):
     ACOUSTID_FINGERPRINT = 'acoustid_fingerprint'
     ACOUSTID_ID = 'acoustid_id'
 
+    # Custom
+
+    COVER_ART = "cover_art"
+
 
 def check_tag_key(tag_key: Tag | str):
     try:
