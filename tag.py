@@ -1,6 +1,8 @@
+import sys
 from enum import Enum
 
-class Tags(Enum):
+
+class Tag(Enum):
     ALBUM = 'album'
     BPM = 'bpm'
     COMPILATION = 'compilation'
@@ -57,13 +59,15 @@ class Tags(Enum):
     ACOUSTID_FINGERPRINT = 'acoustid_fingerprint'
     ACOUSTID_ID = 'acoustid_id'
 
-def check_tag_key(tag_key: Tags | str):
+
+def check_tag_key(tag_key: Tag | str):
     try:
-        Tags(tag_key)
+        Tag(tag_key)
         if isinstance(tag_key, str):
             return tag_key
         else:
             return tag_key.value
 
     except ValueError:
-        raise KeyError(f"Invalid key: {tag_key}")
+        print(f"Invalid mp3 metadata field: {tag_key}", file=sys.stderr)
+        return None

@@ -5,9 +5,9 @@ from mutagen.easyid3 import EasyID3
 from mutagen.id3 import APIC, ID3NoHeaderError, ID3
 from mutagen.mp3 import MP3
 
-import tags
+import tag
 import util
-from tags import Tags
+from tag import Tag
 
 
 class EasyMP3:
@@ -26,7 +26,7 @@ class EasyMP3:
         Sets the title tag to the file name (excluding the extension) for all MP3 files in the directory.
         :return: None
         """
-        self._set_tag(Tags.TITLE, lambda path: util.filename_no_extension(path))
+        self._set_tag(Tag.TITLE, lambda path: util.filename_no_extension(path))
 
     def remove_all_tags(self):
         """
@@ -52,7 +52,7 @@ class EasyMP3:
             else:
                 EasyMP3._apply_cover_art(mp3_path, cover_path)
 
-    def set_tag(self, tag_key: Tags, value: str):
+    def set_tag(self, tag_key: Tag, value: str):
         """
         Sets the specified tag key to a given value for all MP3 files
         in the original directory
@@ -62,14 +62,39 @@ class EasyMP3:
         """
         self._set_tag(tag_key, lambda path: value)
 
-    def _set_tag(self, key: Tags, new_val_func: Callable[[str], str]):
+    def set_tags(self, template: dict[Tag, str]):
+        """
+        Sets multiple tags for mp3 files based on a template. If a key is invalid, it will be
+        skipped and printed to stderr.
+        :param template: A dictionary that contains Tags from the class Tag and values
+                         of type str
+        :raises KeyError: If no valid tags are in the template
+        :return: None
+        """
+        valid_tags_dict: dict[Tag, str] = dict()
+        for key, value in template.items():
+            checked_key = tag.check_tag_key(key)
+            if checked_key is not None:
+                valid_tags_dict[checked_key] = value
+        if not valid_tags_dict:
+            raise KeyError(f"All keys invalid for dictionary: {template}")
+
+        for key, value in valid_tags_dict.items():
+            self._set_tag(key, lambda path: value, check=False)
+
+    def _set_tag(self, key: Tag, new_val_func: Callable[[str], str], check=True):
         """
         Internal method to update a tag key using a provided function to generate new values.
         :param key: The tag key to set
         :param new_val_func: A function that generates a new tag value given the file path
+        :param check: A boolean to decide whether keys should be checked for validity or not
         :return: None
         """
-        key = tags.check_tag_key(key)
+        if check:
+            key = tag.check_tag_key(key)
+            if key is None:
+                raise KeyError(f"Invalid key: {key}")
+
         for mp3_path in self._list:
             audio = EasyMP3._construct_easy_id3(mp3_path)
             audio[key] = new_val_func(mp3_path)
