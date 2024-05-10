@@ -88,7 +88,7 @@ def filename_no_extension(file_path: str):
     return filename_without_ext
 
 
-def get_mime_type(path):
+def get_mime_type(path, verify_image=False):
     """
     Determines the MIME type of the file at the given path.
 
@@ -99,5 +99,7 @@ def get_mime_type(path):
     mime_type, _ = mimetypes.guess_type(path)
     if mime_type is None:
         raise TypeError(f"Invalid mime type for path: {path}")
+    elif verify_image and "image" not in mime_type:
+        raise TypeError(f"The following path is not an image: {path}\nMime Type: {mime_type}")
     else:
         return mime_type

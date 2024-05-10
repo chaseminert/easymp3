@@ -14,6 +14,7 @@ class EasyMP3:
 
     TITLE_FROM_FILE = util.filename_no_extension
 
+
     def __init__(self, directory: str, search_subfolders=True):
         """
         Initializes the EasyMP3 object with a list of paths to MP3 files.
@@ -22,6 +23,9 @@ class EasyMP3:
         :param search_subfolders: Whether to include subfolders in the search.
         """
         self._list: list[str] = util.get_all_mp3s(directory, search_subfolders)
+
+    def get_cover_art_func(self, covers_dir, search_subfolders=True):
+        return lambda path: covers_dir
 
     def set_title_from_file(self):
         """
@@ -62,6 +66,8 @@ class EasyMP3:
         :param value: The value to assign to the tag
         :return: None
         """
+
+
         self._set_tag(tag_key, lambda path: value)
 
     def set_tags(self, template: dict[Tag, str | Callable]):
@@ -73,7 +79,25 @@ class EasyMP3:
         :raises KeyError: If no valid tags are in the template
         :return: None
         """
+
+        if Tag.COVER_ART in template:
+            covers_info = template.pop(Tag.COVER_ART)
+            if isinstance(covers_info, tuple):
+                covers_dir, search_subfolders = covers_info
+                if not isinstance(search_subfolders, bool):
+                    raise TypeError(f"Value '{search_subfolders}' of type {type(search_subfolders)} is an invalid type for key {Tag.COVER_ART}. Expected type is str or tuple[str, bool]")
+                if not isinstance(covers_dir, str):
+                    raise TypeError(f"Value '{covers_dir}' of type {type(covers_dir)} is an invalid type for key {Tag.COVER_ART}. Expected type is str")
+            else:
+                covers_dir = covers_info
+                search_subfolders = True
+
+            self.set_cover_art_from_file(covers_dir, search_subfolders)
+
+
+
         valid_tags_dict: dict[Tag, str] = dict()
+
         for key, value in template.items():
             checked_key = tag.check_tag_key(key)
             if checked_key is not None:
@@ -84,8 +108,10 @@ class EasyMP3:
         for key, value in valid_tags_dict.items():
             if callable(value):
                 function = value
-            else:
+            elif isinstance(value, str):
                 function = lambda path: value
+            else:
+                raise ValueError(f"Value '{value}' of type {type(value)} is an invalid type for key '{key}'. Expected type is str or Callable[str]")
 
             self._set_tag(key, function, check=False)
 
@@ -103,9 +129,13 @@ class EasyMP3:
                 raise KeyError(f"Invalid key: {key}")
 
         for mp3_path in self._list:
-            audio = EasyMP3._construct_easy_id3(mp3_path)
-            audio[key] = new_val_func(mp3_path)
-            audio.save()
+            if key == Tag.COVER_ART.value:
+                cover_art_path = new_val_func(mp3_path)
+                self._apply_cover_art(mp3_path, cover_art_path)
+            else:
+                audio = EasyMP3._construct_easy_id3(mp3_path)
+                audio[key] = new_val_func(mp3_path)
+                audio.save()
 
     @staticmethod
     def _apply_cover_art(mp3_path: str, cover_path: str):
@@ -118,7 +148,8 @@ class EasyMP3:
         with open(cover_path, 'rb') as img:
             cover_data = img.read()
 
-        mime_type = util.get_mime_type(cover_path)
+        mime_type = util.get_mime_type(cover_path, verify_image=True)
+
         apic = APIC(encoding=3, mime=mime_type, type=3, desc='Cover', data=cover_data)
 
         mp3_audio = MP3(mp3_path, ID3=ID3)
@@ -138,7 +169,7 @@ class EasyMP3:
 
         for file in files:
             file_no_extension = util.filename_no_extension(file)
-            if file_no_extension.lower() == song_name.lower() and util.is_image(file):
+            if file_no_extension.lower().strip() == song_name.lower().strip() and util.is_image(file):
                 return file
 
     @staticmethod
