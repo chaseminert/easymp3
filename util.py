@@ -156,22 +156,23 @@ def check_template(template: str):
             f"Invalid string template '{template}'. A string template should not end in .mp3")
 
 
-def check_cover_art_tuple(covers_info: tuple[str, str, bool]):
-    if len(covers_info) != 3:
-        #  Throw error
-        pass
+def parse_cover_art_tuple(covers_info: tuple[str, str, bool]):
+    tuple_len = len(covers_info)
+    if not (tuple_len == 3 or tuple_len == 2):
+        raise exception.InvalidCoversTupleError(f"Tuple {covers_info} is invalid. Must be of length 2 or 3")
 
-    covers_dir, cover_template, include_subfolders = covers_info
-    if not isinstance(cover_template, str):
-        #  Throw error
-        pass
+    covers_dir = cover_template = include_subfolders = None
+    if tuple_len == 2:
+        cover_template, covers_dir = covers_info
+        include_subfolders = True
+    elif tuple_len == 3:
+        cover_template, covers_dir, include_subfolders = covers_info
 
     if not (isinstance(covers_dir, str) and isinstance(cover_template, str) and isinstance(include_subfolders, bool)):
-        #  Throw error saying it should be a string or a 3 length tuple
-        pass
+        raise exception.InvalidCoversTupleError(f"Tuple {covers_info} in invalid. The correct type is tuple[str, str, bool] or tuple[str, str]")
     if not os.path.isdir(covers_dir):
-        #  Throw error
-        pass
+        raise exception.InvalidCoversDirectoryError(f"The specified covers directory is not a directory: {covers_dir}")
 
+    return cover_template, covers_dir, include_subfolders
 
 

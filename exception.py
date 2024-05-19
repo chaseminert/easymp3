@@ -28,3 +28,6 @@ class InvalidTagError(EasyMP3Error):
 
 class InvalidCoversDirectoryError(EasyMP3Error):
     pass
+
+class InvalidCoversTupleError(EasyMP3Error):
+    pass
