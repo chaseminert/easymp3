@@ -1,3 +1,4 @@
+import os.path
 import sys
 from typing import Callable
 
@@ -19,7 +20,7 @@ class EasyMP3:
         """
         Initializes the EasyMP3 object with a list of paths to MP3 files.
         :param directory: Path to the directory to search for MP3 files or a path
-        to a single MP3 file.
+                          to a single MP3 file.
         :param search_subfolders: Whether to include subfolders in the search.
         """
         self._list: list[str] = util.get_all_mp3s(directory, search_subfolders)
@@ -70,7 +71,38 @@ class EasyMP3:
 
         self._set_tag(tag_key, lambda path: value)
 
-    def set_tags(self, template: dict[Tag, str | Callable]):
+
+    def set_filename_from_tags(self, template: str):
+        if template.endswith(".mp3"):
+            raise ValueError(f"Invalid string template '{template}'. A string template should not end in .mp3")
+
+        tag_list = tag.get_tag_list(string=False)
+        for mp3_path in self._list:
+            audio = self._construct_easy_id3(mp3_path)
+            parent_path = os.path.dirname(mp3_path)
+            new_name = template
+            for _tag in tag_list:
+                new_val = audio.get(_tag.value, f"NO{_tag.name}")
+
+                if isinstance(new_val, list):
+                    new_val = util.list_to_str(new_val)
+                new_name = new_name.replace(_tag.name, new_val)
+            new_mp3_path = os.path.join(parent_path, new_name) + ".mp3"
+            os.rename(mp3_path, new_mp3_path)
+
+
+    def set_tags_from_filename(self, template: str):
+        for mp3_path in self._list:
+            file_name_no_extension = util.filename_no_extension(mp3_path)
+            template_dict = util.extract_info(template, file_name_no_extension)
+            audio = self._construct_easy_id3(mp3_path)
+            for key, value in template_dict.items():
+                checked_key = tag.check_tag_key(key)
+                audio[checked_key] = value
+            audio.save()
+
+
+    def set_tags_template(self, template: dict[Tag, str | Callable]):
         """
         Sets multiple tags for mp3 files based on a template. If a key is invalid, it will be
         skipped and printed to stderr.

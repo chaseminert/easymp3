@@ -63,6 +63,9 @@ class Tag(Enum):
 
     COVER_ART = "cover_art"
 
+    def __str__(self):
+        return self.name
+
 
 def check_tag_key(tag_key: Tag | str):
     try:
@@ -75,3 +78,10 @@ def check_tag_key(tag_key: Tag | str):
     except ValueError:
         print(f"Invalid mp3 metadata field: {tag_key}", file=sys.stderr)
         return None
+
+
+def get_tag_list(string=True):
+    if string:
+        return [str(tag_val) for tag_val in Tag if tag_val != Tag.COVER_ART]
+    else:
+        return [tag_val for tag_val in Tag if tag_val != Tag.COVER_ART]

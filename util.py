@@ -1,5 +1,9 @@
 import mimetypes
 import os
+import re
+
+import tag
+from tag import Tag
 
 
 def is_mp3(file_path: str):
@@ -30,6 +34,9 @@ def no_filter(_):
     :return: Always True.
     """
     return True
+
+def no_change(item):
+    return item
 
 
 def get_all_mp3s(directory: str, search_subfolders):
@@ -103,3 +110,40 @@ def get_mime_type(path, verify_image=False):
         raise TypeError(f"The following path is not an image: {path}\nMime Type: {mime_type}")
     else:
         return mime_type
+
+def _replace_attribute(attribute: str) -> str:
+    return f'(?P<{attribute}>.+)'
+
+def filename_from_template(template: str, input_string: str):
+    tag_list = tag.get_tag_list()
+
+    for _tag in tag_list:
+        input_string = input_string.replace()
+
+def list_to_str(_list: list):
+    return ", ".join(_list)
+
+def extract_info(template: str, input_string: str):
+    # Escape special regex characters in the template
+    # Replace placeholders with named capture groups
+    og_template = template  # save original template
+
+    template = re.escape(template)
+
+    template_vals = tag.get_tag_list()
+
+    for tag_val in template_vals:
+        template = template.replace(tag_val, _replace_attribute(tag_val))
+
+    # Compile the regex pattern
+    pattern = re.compile(template)
+
+    # Match the pattern to the input string
+    match = pattern.match(input_string)
+
+    # If there's a match, return the group dictionary
+    if match:
+        result_dict = match.groupdict()
+        return {getattr(Tag, key): value for key, value in result_dict.items()}
+    else:
+        raise ValueError(f"String '{input_string}' is invalid for template '{og_template}'")
