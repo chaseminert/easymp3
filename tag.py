@@ -66,7 +66,6 @@ class Tag(Enum):
     def __str__(self):
         return self.name
 
-
 def check_tag_key(tag_key: Tag | str):
     try:
         Tag(tag_key)

@@ -9,11 +9,15 @@ def main():
     artist = "Juice WRLD"
     album = "Unreleased (Mastered)"
 
+    template = {
+        Tag.ARTIST: artist,
+        Tag.ALBUM: album,
+        Tag.COVER_ART: (f"{Tag.TITLE} - {Tag.ARTIST}", covers_dir, True)
+    }
+
     tagger = EasyMP3(songs_dir, search_subfolders=False)
 
-    template = f"{Tag.TITLE} - {Tag.ARTIST} - {Tag.ALBUM}"
-    tagger.set_filename_from_tags(template)
-
+    tagger.set_tags_from_template(template)
 
     # tagger.remove_all_tags()
 

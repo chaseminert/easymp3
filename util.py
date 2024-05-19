@@ -5,6 +5,8 @@ import re
 import tag
 from tag import Tag
 
+import exception
+
 
 def is_mp3(file_path: str):
     """
@@ -35,6 +37,7 @@ def no_filter(_):
     """
     return True
 
+
 def no_change(item):
     return item
 
@@ -53,7 +56,7 @@ def get_all_mp3s(directory: str, search_subfolders):
     elif os.path.isdir(directory):
         return get_all_files(directory, search_subfolders, is_mp3)
     else:
-        raise TypeError(f"\"{directory}\" is neither an MP3 file nor a directory")
+        raise exception.InvalidMP3DirectoryError(f"\"{directory}\" is neither an MP3 file nor a directory")
 
 
 def get_all_files(directory: str, search_subfolders, filter_func=no_filter):
@@ -99,6 +102,7 @@ def get_mime_type(path, verify_image=False):
     """
     Determines the MIME type of the file at the given path.
 
+    :param verify_image: Whether to verify that the file is an image or not
     :param path: Path to the file to identify.
     :return: The MIME type of the file.
     :raises TypeError: If the MIME type cannot be determined.
@@ -111,17 +115,14 @@ def get_mime_type(path, verify_image=False):
     else:
         return mime_type
 
+
 def _replace_attribute(attribute: str) -> str:
     return f'(?P<{attribute}>.+)'
 
-def filename_from_template(template: str, input_string: str):
-    tag_list = tag.get_tag_list()
-
-    for _tag in tag_list:
-        input_string = input_string.replace()
 
 def list_to_str(_list: list):
     return ", ".join(_list)
+
 
 def extract_info(template: str, input_string: str):
     # Escape special regex characters in the template
@@ -146,4 +147,31 @@ def extract_info(template: str, input_string: str):
         result_dict = match.groupdict()
         return {getattr(Tag, key): value for key, value in result_dict.items()}
     else:
-        raise ValueError(f"String '{input_string}' is invalid for template '{og_template}'")
+        raise exception.InvalidFilenameError(f"String '{input_string}' is invalid for template '{og_template}'")
+
+
+def check_template(template: str):
+    if template.endswith(".mp3"):
+        raise exception.InvalidStringTemplateError(
+            f"Invalid string template '{template}'. A string template should not end in .mp3")
+
+
+def check_cover_art_tuple(covers_info: tuple[str, str, bool]):
+    if len(covers_info) != 3:
+        #  Throw error
+        pass
+
+    covers_dir, cover_template, include_subfolders = covers_info
+    if not isinstance(cover_template, str):
+        #  Throw error
+        pass
+
+    if not (isinstance(covers_dir, str) and isinstance(cover_template, str) and isinstance(include_subfolders, bool)):
+        #  Throw error saying it should be a string or a 3 length tuple
+        pass
+    if not os.path.isdir(covers_dir):
+        #  Throw error
+        pass
+
+
+
