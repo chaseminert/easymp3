@@ -31,3 +31,6 @@ class InvalidCoversDirectoryError(EasyMP3Error):
 
 class InvalidCoversTupleError(EasyMP3Error):
     pass
+
+class InvalidCoverArtDataError(EasyMP3Error):
+    pass

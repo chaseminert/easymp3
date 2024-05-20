@@ -101,18 +101,16 @@ class EasyMP3:
         """
         Sets multiple tags for MP3 files based on a template dictionary.
 
-        This method updates tags for MP3 files using a provided template. Invalid keys are skipped and printed to stderr.
+        This method updates tags for MP3 files using a provided template. Invalid keys are skipped and printed to
+        stderr.
 
-        :param: template_dict (dict[Tag, str | tuple[str, str, bool] | tuple[str, str]]):
-            - A dictionary containing `Tag` keys and string values.
-            - Special handling for `Tag.COVERART` values:
-                - **Single path** (str): Path to a cover art file applied to all MP3 files.
-                - **Directory path** (str): Path to cover art files with matching filenames to MP3 files, searching subfolders.
-                - **Template string** (str): Template for cover art filenames, searching in the MP3 files' directory and subfolders.
-                - **Tuple** (tuple[str, str, bool] | tuple[str, str]):
-                    - Template for cover art filenames.
-                    - Path to the cover art files.
-                    - Boolean indicating whether to search subfolders (optional).
+        :param: template_dict (dict[Tag, str | tuple[str, str, bool] | tuple[str, str]]): - A dictionary containing
+        `Tag` keys and string values. - Special handling for `Tag.COVERART` values: - **Single path** (str): Path to
+        a cover art file applied to all MP3 files. - **Directory path** (str): Path to cover art files with matching
+        filenames to MP3 files, searching subfolders. - **Template string** (str): Template for cover art filenames,
+        searching in the MP3 files' directory and subfolders. - **Tuple** (tuple[str, str, bool] | tuple[str,
+        str]): - Template for cover art filenames. - Path to the cover art files. - Boolean indicating whether to
+        search subfolders (optional).
 
         :raise KeyError if no valid tags are found
 
@@ -131,7 +129,7 @@ class EasyMP3:
                     self.set_cover_art(covers_info)
                 else:
                     #  It must be a template
-                    self.set_cover_art(template=covers_info)
+                    self.set_cover_art(template_str=covers_info)
             elif isinstance(covers_info, tuple):
                 covers_template, covers_dir, include_sub = util.parse_cover_art_tuple(covers_info)
                 self.set_cover_art(covers_dir, covers_template, include_sub)
@@ -150,6 +148,18 @@ class EasyMP3:
             for key, value in valid_tags_dict.items():
                 audio[key] = value
             audio.save()
+
+    def extract_cover_arts(self, folder_path: str, template_str: str = FROM_FILENAME):
+        tag_list = tag.get_tag_list(string=False)
+        os.makedirs(folder_path, exist_ok=True)
+        for mp3_path in self._list:
+            if template_str == FROM_FILENAME:
+                cover_name_no_exten = util.filename_no_extension(mp3_path)
+            else:
+                cover_name_no_exten = self._new_name_from_template(mp3_path, template_str, tag_list)
+
+            dest_path_no_exten = os.path.join(folder_path, cover_name_no_exten)
+            util.extract_cover_art(mp3_path, dest_path_no_exten)
 
     def _new_name_from_template(self, mp3_path: str, template: str, tag_list: list[Tag]):
         audio = self._construct_easy_id3(mp3_path)

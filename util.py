@@ -1,6 +1,10 @@
 import mimetypes
 import os
 import re
+import sys
+
+from mutagen.id3 import ID3
+from mutagen.mp3 import MP3
 
 import tag
 from tag import Tag
@@ -174,5 +178,41 @@ def parse_cover_art_tuple(covers_info: tuple[str, str, bool]):
         raise exception.InvalidCoversDirectoryError(f"The specified covers directory is not a directory: {covers_dir}")
 
     return cover_template, covers_dir, include_subfolders
+
+def extract_cover_art(mp3_path, dest_path_no_extension: str):
+    """
+    Extracts the first cover art from an MP3 file and saves it to the destination folder.
+    :param mp3_path: Path to the MP3 file.
+    :param dest_folder: Path to the destination folder where the cover art will be saved.
+    :return: None
+    """
+
+    audio = MP3(mp3_path, ID3=ID3)
+
+    apic_frame = audio.tags.getall('APIC')
+
+    if not apic_frame:
+        print(f"No cover art found for file: {mp3_path}", file=sys.stderr)
+        return
+
+    apic_frame = apic_frame[0]
+
+    mime: str = apic_frame.mime.lower()
+    if not mime.startswith("image"):
+        raise exception.InvalidCoverArtDataError(f"The cover art from mp3 '{mp3_path}' has invalid data\n"
+                                                 f"Mime type is '{mime}'")
+    extension = get_extension_from_mime(mime)
+    dest_path_full = dest_path_no_extension + extension
+
+    with open(dest_path_full, 'wb') as img_file:
+        img_file.write(apic_frame.data)
+
+def get_extension_from_mime(mime: str):
+    extension = mimetypes.guess_extension(mime)
+    if extension:
+        return extension
+    else:
+        return 'bin'  # Default if mimetype is unknown
+
 
 

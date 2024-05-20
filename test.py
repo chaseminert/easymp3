@@ -12,13 +12,9 @@ from tag import Tag
 
 
 def main():
-    template = f"{Tag.ARTIST} - {Tag.TITLE}"
-    song = "Black and White - Juice WRLD"
-
-
-    song_info = util.extract_info(template, song)
-    print(song_info)
-
+    mp3_path = r"mp3s\6 Kiss.mp3"
+    dest_dir = r"mp3s\6 Kiss"
+    util.extract_cover_art(mp3_path, dest_dir)
 
 
 if __name__ == "__main__":
