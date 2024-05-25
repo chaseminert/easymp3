@@ -1,4 +1,5 @@
 import os.path
+import shutil
 import sys
 
 from mutagen.easyid3 import EasyID3
@@ -8,6 +9,7 @@ from mutagen.mp3 import MP3
 import exception
 import tag
 import util
+from util import INVALID_CHAR_TRANS
 from tag import Tag
 
 FROM_FILENAME = "from_filename"
@@ -55,14 +57,14 @@ class EasyMP3:
             if template_str == FROM_FILENAME:
                 cover_file = util.filename_no_extension(mp3_path)
             else:
-                cover_file = self._new_name_from_template(mp3_path, template_str, tag_list)
+                cover_file = self._new_name_from_template(mp3_path, template_str, tag_list, rename_invalid=False)
             cover_path: str = EasyMP3._find_cover_from_file(cover_file, covers_dir, search_subfolders)
             if cover_path is None:
                 print(f"Cover Not Found for: {mp3_path}", file=sys.stderr)
             else:
                 EasyMP3._apply_cover_art(mp3_path, cover_path)
 
-    def set_filename_from_tags(self, template_str: str):
+    def set_filename_from_tags(self, template_str: str, copy=False, rename_invalid=True):
         """
         Renames all the MP3 filenames with their tags by using a template.
         :param template_str: A string representing how to format the new file name.
@@ -73,11 +75,20 @@ class EasyMP3:
         """
         util.check_template(template_str)
         tag_list = tag.get_tag_list(string=False)
+
         for mp3_path in self._list:
             parent_path = os.path.dirname(mp3_path)
-            new_name = self._new_name_from_template(mp3_path, template_str, tag_list)
+            new_name = self._new_name_from_template(mp3_path, template_str, tag_list, rename_invalid)
+
             new_mp3_path = os.path.join(parent_path, new_name) + ".mp3"
-            os.rename(mp3_path, new_mp3_path)
+
+            base_path = os.path.dirname(new_mp3_path)
+            os.makedirs(base_path, exist_ok=True)
+
+            if copy:
+                shutil.copy2(mp3_path, new_mp3_path)
+            else:
+                shutil.move(mp3_path, new_mp3_path)
 
     def set_tags_from_filename(self, template_str: str):
         """
@@ -105,19 +116,29 @@ class EasyMP3:
         stderr.
 
         :param: template_dict (dict[Tag, str | tuple[str, str, bool] | tuple[str, str]]): - A dictionary containing
-        `Tag` keys and string values. - Special handling for `Tag.COVERART` values: - **Single path** (str): Path to
-        a cover art file applied to all MP3 files. - **Directory path** (str): Path to cover art files with matching
-        filenames to MP3 files, searching subfolders. - **Template string** (str): Template for cover art filenames,
-        searching in the MP3 files' directory and subfolders. - **Tuple** (tuple[str, str, bool] | tuple[str,
-        str]): - Template for cover art filenames. - Path to the cover art files. - Boolean indicating whether to
-        search subfolders (optional).
+        `Tag` keys and string values.
+
+        - Special handling for `Tag.COVERART` values:
+            - **Single path** (str): Path to a cover art file applied to all MP3 files.
+            - **Directory path** (str): Path to cover art files with matching filenames
+              to MP3 files, searching subfolders.
+            - **Template string** (str): Template for cover art filenames, searching in
+              the MP3 files' directory and subfolders.
+            - **Tuple** (tuple[str, str, bool] | tuple[str, str]):
+                - Template for cover art filenames (can be the value FROM_FILENAME to simply
+                  get the cover art filename from the name of the mp3 file).
+                - Path to the cover art files.
+                - Boolean indicating whether to search subfolders (optional).
 
         :raise KeyError if no valid tags are found
 
         :return None
         """
 
+        cover_art_key = False  # If cover art was in the template
+
         if Tag.COVER_ART in template_dict:
+            cover_art_key = True
             covers_info = template_dict.pop(Tag.COVER_ART)
             if isinstance(covers_info, str):
                 if util.is_image(covers_info):
@@ -140,7 +161,7 @@ class EasyMP3:
             checked_key = tag.check_tag_key(key)
             if checked_key is not None:
                 valid_tags_dict[checked_key] = value
-        if not valid_tags_dict:
+        if not valid_tags_dict and not cover_art_key:
             raise exception.NoValidKeysError(f"All keys invalid for dictionary: {template_dict}")
 
         for mp3_path in self._list:
@@ -149,28 +170,45 @@ class EasyMP3:
                 audio[key] = value
             audio.save()
 
-    def extract_cover_arts(self, folder_path: str, template_str: str = FROM_FILENAME):
+    def extract_cover_arts(self, folder_path: str, template_str: str = FROM_FILENAME, rename_invalid=True):
         tag_list = tag.get_tag_list(string=False)
         os.makedirs(folder_path, exist_ok=True)
         for mp3_path in self._list:
             if template_str == FROM_FILENAME:
                 cover_name_no_exten = util.filename_no_extension(mp3_path)
             else:
-                cover_name_no_exten = self._new_name_from_template(mp3_path, template_str, tag_list)
+                cover_name_no_exten = self._new_name_from_template(mp3_path, template_str, tag_list, rename_invalid)
 
             dest_path_no_exten = os.path.join(folder_path, cover_name_no_exten)
             util.extract_cover_art(mp3_path, dest_path_no_exten)
 
-    def _new_name_from_template(self, mp3_path: str, template: str, tag_list: list[Tag]):
+    def _new_name_from_template(self, mp3_path: str, template: str, tag_list: list[Tag], rename_invalid):
         audio = self._construct_easy_id3(mp3_path)
-        parent_path = os.path.dirname(mp3_path)
         new_name = template
         for _tag in tag_list:
             new_val = audio.get(_tag.value, f"NO{_tag.name}")
+
             if isinstance(new_val, list):
                 new_val = util.list_to_str(new_val)
+            new_val_translated = new_val.translate(INVALID_CHAR_TRANS)
+            if rename_invalid:
+                new_val = new_val_translated
+            elif not util.is_valid_sub_file_name(new_val) and _tag.name in new_name:
+                new_val = util.get_valid_replacement(new_val)
+                print()
+
+            if new_val != new_val_translated:
+                pass
             new_name = new_name.replace(_tag.name, new_val)
         return new_name
+
+    @property
+    def mp3_list(self):
+        return self._list
+
+    @property
+    def mp3s_directory(self):
+        return self._directory
 
     @staticmethod
     def _apply_cover_art(mp3_path: str, cover_path: str):

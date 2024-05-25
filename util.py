@@ -11,6 +11,20 @@ from tag import Tag
 
 import exception
 
+INVALID_CHAR_MAP = {
+    ":": "-",
+    "\\": "-",
+    "/": "-",
+    "*": " ",
+    "?": " ",
+    "\"": "'",
+    "<": " ",
+    ">": " ",
+    "|": " "
+}
+
+INVALID_CHAR_TRANS = str.maketrans(INVALID_CHAR_MAP)
+
 
 def is_mp3(file_path: str):
     """
@@ -214,5 +228,34 @@ def get_extension_from_mime(mime: str):
     else:
         return 'bin'  # Default if mimetype is unknown
 
+def is_valid_sub_file_name(name: str) -> bool:
+    """
+    Returns if a string has any characters that can't be in a filename path
+    :param path:
+    :return:
+    """
+    return name == name.translate(INVALID_CHAR_TRANS)
 
+def get_valid_replacement(initial_val: str):
+    invalid_chars = get_invalid_filename_chars(initial_val)
+    print(f"'{initial_val}' contains invalid path characters: {invalid_chars}")
+    while True:
+        new_val = input(f"Enter new name: ")
+        if new_val == new_val.translate(INVALID_CHAR_TRANS):
+            return new_val
+        invalid_chars = get_invalid_filename_chars(new_val)
+        print(f"The entered name contains invalid path characters: {invalid_chars}")
+
+def get_invalid_filename_chars(name: str, string=True):
+    invalid_chars = set()
+    for char in name:
+        if char in INVALID_CHAR_MAP:
+            invalid_chars.add(char)
+
+    invalid_tuple = tuple(sorted(invalid_chars))
+    if string:
+        wrapped_tuple = (f"'{char}'" for char in invalid_tuple)
+        return ", ".join(wrapped_tuple)
+    else:
+        return invalid_tuple
 
