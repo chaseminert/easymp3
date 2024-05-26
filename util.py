@@ -218,6 +218,9 @@ def extract_cover_art(mp3_path, dest_path_no_extension: str):
     extension = get_extension_from_mime(mime)
     dest_path_full = dest_path_no_extension + extension
 
+    base_dir = os.path.dirname(dest_path_full)
+    os.makedirs(base_dir, exist_ok=True)
+
     with open(dest_path_full, 'wb') as img_file:
         img_file.write(apic_frame.data)
 

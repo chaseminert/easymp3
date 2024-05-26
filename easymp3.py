@@ -25,6 +25,7 @@ class EasyMP3:
         """
         self._list: list[str] = util.get_all_mp3s(directory, search_subfolders)
         self._directory = directory
+        self._search_sub = search_subfolders
 
     def remove_all_tags(self):
         """
@@ -38,7 +39,7 @@ class EasyMP3:
     def set_cover_art(self, covers_dir=None, template_str: str = FROM_FILENAME, search_subfolders=True):
         """
         Adds cover art to MP3 files based on matching image files in the specified directory.
-        Matches are found by filename or by using a template string
+        Matches are found by filename (default) or by using a template string
         :param covers_dir: Directory containing cover images. Default is the directory of the MP3 files
         :param template_str: A string containing a template for the name of the cover art (with the default
                              being to search for matching file names).
@@ -71,6 +72,10 @@ class EasyMP3:
                          ex. f"{Tag.TITLE} - {Tag.ARTIST}"
                          Note: A template should never end with .mp3 as this is
                          implied
+        :param rename_invalid: A boolean variable to control whether to automatically
+                         rename invalid filenames or have the user rename them as they
+                         occur
+        :param copy: A boolean variable to control whether the files are moved or copied
         :return: None
         """
         util.check_template(template_str)
@@ -89,6 +94,7 @@ class EasyMP3:
                 shutil.copy2(mp3_path, new_mp3_path)
             else:
                 shutil.move(mp3_path, new_mp3_path)
+        self._reload_directory()
 
     def set_tags_from_filename(self, template_str: str):
         """
@@ -108,7 +114,7 @@ class EasyMP3:
                 audio[checked_key] = value
             audio.save()
 
-    def set_tags_from_template(self, template_dict: dict[Tag, str | tuple[str, str, bool] | tuple[str, str]]):
+    def set_tags_from_dict(self, template_dict: dict[Tag, str | tuple[str, str, bool] | tuple[str, str]]):
         """
         Sets multiple tags for MP3 files based on a template dictionary.
 
@@ -129,13 +135,28 @@ class EasyMP3:
                   get the cover art filename from the name of the mp3 file).
                 - Path to the cover art files.
                 - Boolean indicating whether to search subfolders (optional).
+        - Special handling for `Tag.TITLE` values:
+            - If the value for `Tag.TITLE` is `FROM_FILENAME` then the tite for each mp3
+                file will be set as the filename (without extension)
+            - Otherwise, the title of every mp3 will be set as the value for `Tag.TITLE` in
+                template_dict
 
         :raise KeyError if no valid tags are found
-
         :return None
         """
 
         cover_art_key = False  # If cover art was in the template
+        is_title_from_file = False
+
+        title_from_file = template_dict.get(Tag.TITLE, None)
+
+        if title_from_file == FROM_FILENAME:
+            template_dict.pop(Tag.TITLE)
+
+            is_title_from_file = True
+            template_str = f"{Tag.TITLE}"
+            self.set_tags_from_filename(template_str)
+
 
         if Tag.COVER_ART in template_dict:
             cover_art_key = True
@@ -161,7 +182,7 @@ class EasyMP3:
             checked_key = tag.check_tag_key(key)
             if checked_key is not None:
                 valid_tags_dict[checked_key] = value
-        if not valid_tags_dict and not cover_art_key:
+        if not valid_tags_dict and not cover_art_key and not is_title_from_file:
             raise exception.NoValidKeysError(f"All keys invalid for dictionary: {template_dict}")
 
         for mp3_path in self._list:
@@ -170,19 +191,37 @@ class EasyMP3:
                 audio[key] = value
             audio.save()
 
-    def extract_cover_arts(self, folder_path: str, template_str: str = FROM_FILENAME, rename_invalid=True):
+    def extract_cover_arts(self, folder_path: str, template_str: str = f"{Tag.TITLE}", rename_invalid=True):
+        """
+        Extracts the cover arts for all mp3 files
+        :param folder_path: A string representing the directory for the extracted cover arts
+        :param template_str: A string representing how each extracted cover art should be named.
+                            ex. f"{Tag.TITLE} - {Tag.ARTIST}".
+                            - Tags can also create new directories used to group cover arts.
+                                Ex. f"{Tag.ARTIST}\\{Tag.TITLE}"
+                                - This will create a folder for each artist with their cover art images
+                                    inside.
+                            - the default is the filename of the original mp3
+        :param rename_invalid: Whether to automatically rename invalid filenames or to prompt
+                            the user for a new name every time an invalid filename is found
+        :return:
+        """
         tag_list = tag.get_tag_list(string=False)
         os.makedirs(folder_path, exist_ok=True)
         for mp3_path in self._list:
-            if template_str == FROM_FILENAME:
-                cover_name_no_exten = util.filename_no_extension(mp3_path)
-            else:
-                cover_name_no_exten = self._new_name_from_template(mp3_path, template_str, tag_list, rename_invalid)
+            cover_name_no_extension = self._new_name_from_template(mp3_path, template_str, tag_list, rename_invalid)
+            dest_path_no_extension = os.path.join(folder_path, cover_name_no_extension)
+            util.extract_cover_art(mp3_path, dest_path_no_extension)
 
-            dest_path_no_exten = os.path.join(folder_path, cover_name_no_exten)
-            util.extract_cover_art(mp3_path, dest_path_no_exten)
-
-    def _new_name_from_template(self, mp3_path: str, template: str, tag_list: list[Tag], rename_invalid):
+    def _new_name_from_template(self, mp3_path: str, template: str, tag_list: list[Tag], rename_invalid: bool):
+        """
+        Internal method that parses template strings based on the tags of an mp3 file
+        :param mp3_path: The path to the mp3 file
+        :param template: A traditional string template. Ex. f"{Tag.TITLE}"
+        :param tag_list: A list of tags from the Tag class
+        :param rename_invalid: Whether to rename invalid files automatically or prompt the user
+        :return:
+        """
         audio = self._construct_easy_id3(mp3_path)
         new_name = template
         for _tag in tag_list:
@@ -202,13 +241,12 @@ class EasyMP3:
             new_name = new_name.replace(_tag.name, new_val)
         return new_name
 
-    @property
-    def mp3_list(self):
-        return self._list
-
-    @property
-    def mp3s_directory(self):
-        return self._directory
+    def _reload_directory(self):
+        """
+        Internal method that resets the list of paths to mp3 files. Used after filenames are changed
+        :return: None
+        """
+        self._list = util.get_all_mp3s(self._directory, self._search_sub)
 
     @staticmethod
     def _apply_cover_art(mp3_path: str, cover_path: str):
@@ -259,3 +297,16 @@ class EasyMP3:
             audio_tags = EasyID3()
             audio_tags.save(path)
             return EasyID3(path)
+
+
+    @property
+    def mp3_list(self) -> list[str]:
+        return self._list
+
+    @property
+    def mp3s_directory(self) -> str:
+        return self._directory
+
+    @property
+    def include_subfolders(self) -> bool:
+        return self._search_sub
