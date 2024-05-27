@@ -52,7 +52,7 @@ class EasyMP3:
         if covers_dir is None:
             covers_dir = self._directory
         if not isinstance(template_str, str):
-            raise exception.InvalidStringTemplateError(f"Template must be a string. Invalid template: {template_str}")
+            raise exception.InvalidTemplateStringError(f"Template must be a string. Invalid template: {template_str}")
         tag_list = tag.get_tag_list(string=False)
         for mp3_path in self._list:
             if template_str == FROM_FILENAME:
@@ -116,74 +116,40 @@ class EasyMP3:
 
     def set_tags_from_dict(self, template_dict: dict[Tag, str | tuple[str, str, bool] | tuple[str, str]]):
         """
-        Sets multiple tags for MP3 files based on a template dictionary.
+        Sets the same tags for all MP3 files based on a template dictionary.
 
-        This method updates tags for MP3 files using a provided template. Invalid keys are skipped and printed to
-        stderr.
-
-        :param: template_dict (dict[Tag, str | tuple[str, str, bool] | tuple[str, str]]): - A dictionary containing
+        :param: template_dict (dict[Tag, str]): - A dictionary containing
         `Tag` keys and string values.
 
-        - Special handling for `Tag.COVERART` values:
-            - **Single path** (str): Path to a cover art file applied to all MP3 files.
-            - **Directory path** (str): Path to cover art files with matching filenames
-              to MP3 files, searching subfolders.
-            - **Template string** (str): Template for cover art filenames, searching in
-              the MP3 files' directory and subfolders.
-            - **Tuple** (tuple[str, str, bool] | tuple[str, str]):
-                - Template for cover art filenames (can be the value FROM_FILENAME to simply
-                  get the cover art filename from the name of the mp3 file).
-                - Path to the cover art files.
-                - Boolean indicating whether to search subfolders (optional).
-        - Special handling for `Tag.TITLE` values:
-            - If the value for `Tag.TITLE` is `FROM_FILENAME` then the tite for each mp3
-                file will be set as the filename (without extension)
-            - Otherwise, the title of every mp3 will be set as the value for `Tag.TITLE` in
-                template_dict
-
         :raise KeyError if no valid tags are found
+        :raise InvalidDict
         :return None
         """
 
         cover_art_key = False  # If cover art was in the template
-        is_title_from_file = False
-
-        title_from_file = template_dict.get(Tag.TITLE, None)
-
-        if title_from_file == FROM_FILENAME:
-            template_dict.pop(Tag.TITLE)
-
-            is_title_from_file = True
-            template_str = f"{Tag.TITLE}"
-            self.set_tags_from_filename(template_str)
-
 
         if Tag.COVER_ART in template_dict:
             cover_art_key = True
             covers_info = template_dict.pop(Tag.COVER_ART)
-            if isinstance(covers_info, str):
-                if util.is_image(covers_info):
-                    #  put same image for all
-                    for mp3_path in self._list:
-                        self._apply_cover_art(mp3_path, covers_info)
-                elif os.path.isdir(covers_info):
-                    #  put cover art from filename for all
-                    self.set_cover_art(covers_info)
-                else:
-                    #  It must be a template
-                    self.set_cover_art(template_str=covers_info)
-            elif isinstance(covers_info, tuple):
-                covers_template, covers_dir, include_sub = util.parse_cover_art_tuple(covers_info)
-                self.set_cover_art(covers_dir, covers_template, include_sub)
-
+            if isinstance(covers_info, str) and util.is_image(covers_info):
+                #  put same image for all
+                for mp3_path in self._list:
+                    self._apply_cover_art(mp3_path, covers_info)
+            else:
+                raise exception.InvalidTemplateDictError(f"The value for key {Tag.COVER_ART} must be a string representing"
+                                                         f"a path to a cover art image.\nInvalid value: {covers_info}")
         valid_tags_dict: dict[Tag, str] = dict()
 
         for key, value in template_dict.items():
+
             checked_key = tag.check_tag_key(key)
             if checked_key is not None:
                 valid_tags_dict[checked_key] = value
-        if not valid_tags_dict and not cover_art_key and not is_title_from_file:
-            raise exception.NoValidKeysError(f"All keys invalid for dictionary: {template_dict}")
+                if not isinstance(value, str):
+                    raise exception.InvalidTemplateDictError(f"The value for key {key} must be a string."
+                                                             f"\nInvalid value: {value}")
+        if not valid_tags_dict and not cover_art_key:
+            raise exception.NoValidKeysError(f"No valid keys found for template dictionary: {template_dict}")
 
         for mp3_path in self._list:
             audio = self._construct_easy_id3(mp3_path)

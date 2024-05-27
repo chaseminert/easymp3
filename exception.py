@@ -2,11 +2,11 @@ class EasyMP3Error(Exception):
     pass
 
 
-class InvalidStringTemplateError(EasyMP3Error):
+class InvalidTemplateStringError(EasyMP3Error):
     pass
 
 
-class InvalidDictTemplateError(EasyMP3Error):
+class InvalidTemplateDictError(EasyMP3Error):
     pass
 
 
@@ -27,9 +27,6 @@ class InvalidTagError(EasyMP3Error):
 
 
 class InvalidCoversDirectoryError(EasyMP3Error):
-    pass
-
-class InvalidCoversTupleError(EasyMP3Error):
     pass
 
 class InvalidCoverArtDataError(EasyMP3Error):

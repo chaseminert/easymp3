@@ -135,16 +135,36 @@ def get_mime_type(path, verify_image=False):
 
 
 def _replace_attribute(attribute: str) -> str:
+    """
+    An internal method used for replacing template strings with actual values using regex
+    :param attribute: a string which should be a member of Tag
+    :return: The new regex string
+    """
     return f'(?P<{attribute}>.+)'
 
 
 def list_to_str(_list: list):
+    """
+    Converts a list to a string. Useful when a tag has a list of strings instead of
+    simply a string
+    :param _list: The list to be converted
+    :return: A string representation of the list
+    """
     return ", ".join(_list)
 
 
 def extract_info(template: str, input_string: str):
     # Escape special regex characters in the template
     # Replace placeholders with named capture groups
+    """
+    Parses the information from a template string
+    :param template: A traditional string template.
+                     ex. f"{Tag.TITLE} - {Tag.ARTIST}"
+    :param input_string: The non-templated string.
+                     ex. "Black And White - Juice WRLD"
+    :return: A dictionary with tags and values
+    """
+
     og_template = template  # save original template
 
     template = re.escape(template)
@@ -169,12 +189,23 @@ def extract_info(template: str, input_string: str):
 
 
 def check_template(template: str):
+    """
+    A method to ensure that a template string does not end with .mp3
+    :param template: A traditional string template
+    :return: None
+    :raises InvalidStringTemplateError if the template ends with .mp3
+    """
     if template.endswith(".mp3"):
-        raise exception.InvalidStringTemplateError(
+        raise exception.InvalidTemplateStringError(
             f"Invalid string template '{template}'. A string template should not end in .mp3")
 
 
-def parse_cover_art_tuple(covers_info: tuple[str, str, bool]):
+def parse_cover_art_tuple(covers_info: tuple[str, str, bool] | tuple[str, str]):
+    """
+    Parses the information from a cover art tuple (Used when )
+    :param covers_info:
+    :return:
+    """
     tuple_len = len(covers_info)
     if not (tuple_len == 3 or tuple_len == 2):
         raise exception.InvalidCoversTupleError(f"Tuple {covers_info} is invalid. Must be of length 2 or 3")
@@ -197,7 +228,7 @@ def extract_cover_art(mp3_path, dest_path_no_extension: str):
     """
     Extracts the first cover art from an MP3 file and saves it to the destination folder.
     :param mp3_path: Path to the MP3 file.
-    :param dest_folder: Path to the destination folder where the cover art will be saved.
+    :param dest_folder: Path to the destination folder and file (with no extension) where the cover art will be saved.
     :return: None
     """
 
@@ -234,8 +265,8 @@ def get_extension_from_mime(mime: str):
 def is_valid_sub_file_name(name: str) -> bool:
     """
     Returns if a string has any characters that can't be in a filename path
-    :param path:
-    :return:
+    :param name: The path to be tested
+    :return: True if `name` can be a valid path, False otherwise
     """
     return name == name.translate(INVALID_CHAR_TRANS)
 
