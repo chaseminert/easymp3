@@ -185,8 +185,7 @@ def extract_info(template: str, input_string: str):
         result_dict = match.groupdict()
         return {getattr(Tag, key): value for key, value in result_dict.items()}
     else:
-        raise exception.InvalidFilenameError(f"String '{input_string}' is invalid for template '{og_template}'")
-
+        return None
 
 def check_template(template: str):
     """
@@ -224,7 +223,7 @@ def parse_cover_art_tuple(covers_info: tuple[str, str, bool] | tuple[str, str]):
 
     return cover_template, covers_dir, include_subfolders
 
-def extract_cover_art(mp3_path, dest_path_no_extension: str):
+def extract_cover_art(mp3_path, dest_path_no_extension: str, show_output: bool) -> None:
     """
     Extracts the first cover art from an MP3 file and saves it to the destination folder.
     :param mp3_path: Path to the MP3 file.
@@ -254,6 +253,8 @@ def extract_cover_art(mp3_path, dest_path_no_extension: str):
 
     with open(dest_path_full, 'wb') as img_file:
         img_file.write(apic_frame.data)
+    if show_output:
+        print(f"Successfully extracted cover art from MP3 with path '{mp3_path}' to file '{dest_path_full}'")
 
 def get_extension_from_mime(mime: str):
     extension = mimetypes.guess_extension(mime)
