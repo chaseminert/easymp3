@@ -2,6 +2,7 @@ import mimetypes
 import os
 import re
 import sys
+from typing import Any
 
 from mutagen.id3 import ID3
 from mutagen.mp3 import MP3
@@ -26,12 +27,12 @@ INVALID_CHAR_MAP = {
 INVALID_CHAR_TRANS = str.maketrans(INVALID_CHAR_MAP)
 
 
-def is_mp3(file_path: str):
+def is_mp3(file_path: str) -> bool:
     """
     Checks if a given file path points to an existing MP3 file.
 
     :param file_path: Path to the file to check.
-    :return: True if the file is an MP3 file, otherwise False.
+    :returns: True if the file is an MP3 file, otherwise False.
     """
     return os.path.isfile(file_path) and file_path.endswith(".mp3")
 
@@ -41,32 +42,28 @@ def is_image(file_path: str) -> bool:
     Determines if the file at the given path is an image file.
 
     :param file_path: Path to the file to check.
-    :return: True if the file is an image and exists, otherwise False.
+    :returns: True if the file is an image and exists, otherwise False.
     """
     return os.path.isfile(file_path) and "image" in get_mime_type(file_path)
 
 
-def no_filter(_):
+def no_filter(_: Any) -> bool:
     """
     A no-op filter function that always returns True. Useful as a default filter.
 
     :param _: An unused parameter.
-    :return: Always True.
+    :returns: Always True.
     """
     return True
 
 
-def no_change(item):
-    return item
-
-
-def get_all_mp3s(directory: str, search_subfolders):
+def get_all_mp3s(directory: str, search_subfolders: bool) -> list[str]:
     """
-    Retrieves a list of MP3 files from a directory, optionally searching subfolders.
+    Retrieves a list of MP3 files from a directory
 
-    :param directory: Path to the root directory or an individual MP3 file.
+    :param directory: Path to a directory containing MP3 files or an individual MP3 file
     :param search_subfolders: Whether to include subdirectories in the search.
-    :return: List of MP3 files found.
+    :return: List of MP3 files found
     :raises TypeError: If the given path is not an MP3 file or directory.
     """
     if is_mp3(directory):
@@ -77,7 +74,7 @@ def get_all_mp3s(directory: str, search_subfolders):
         raise exception.InvalidMP3DirectoryError(f"\"{directory}\" is neither an MP3 file nor a directory")
 
 
-def get_all_files(directory: str, search_subfolders, filter_func=no_filter):
+def get_all_files(directory: str, search_subfolders: bool, filter_func=no_filter) -> list[str]:
     """
     Retrieves a list of files from a directory based on a filter function.
 
@@ -103,7 +100,7 @@ def get_all_files(directory: str, search_subfolders, filter_func=no_filter):
     return files
 
 
-def filename_no_extension(file_path: str):
+def filename_no_extension(file_path: str) -> str:
     """
     Extracts the base filename from a given file path, excluding the extension.
 
@@ -116,7 +113,7 @@ def filename_no_extension(file_path: str):
     return filename_without_ext
 
 
-def get_mime_type(path, verify_image=False):
+def get_mime_type(path, verify_image=False) -> str:
     """
     Determines the MIME type of the file at the given path.
 
@@ -143,7 +140,7 @@ def _replace_attribute(attribute: str) -> str:
     return f'(?P<{attribute}>.+)'
 
 
-def list_to_str(_list: list):
+def list_to_str(_list: list) -> str:
     """
     Converts a list to a string. Useful when a tag has a list of strings instead of
     simply a string
@@ -153,7 +150,7 @@ def list_to_str(_list: list):
     return ", ".join(_list)
 
 
-def extract_info(template: str, input_string: str):
+def extract_info(template: str, input_string: str) -> dict[Tag, str] | None:
     # Escape special regex characters in the template
     # Replace placeholders with named capture groups
     """
@@ -164,8 +161,6 @@ def extract_info(template: str, input_string: str):
                      ex. "Black And White - Juice WRLD"
     :return: A dictionary with tags and values
     """
-
-    og_template = template  # save original template
 
     template = re.escape(template)
 
@@ -187,48 +182,25 @@ def extract_info(template: str, input_string: str):
     else:
         return None
 
-def check_template(template: str):
+
+def check_template(template: str) -> None:
     """
     A method to ensure that a template string does not end with .mp3
     :param template: A traditional string template
-    :return: None
-    :raises InvalidStringTemplateError if the template ends with .mp3
+    :raises InvalidStringTemplateError: If the template ends with .mp3
     """
     if template.endswith(".mp3"):
         raise exception.InvalidTemplateStringError(
             f"Invalid string template '{template}'. A string template should not end in .mp3")
 
 
-def parse_cover_art_tuple(covers_info: tuple[str, str, bool] | tuple[str, str]):
-    """
-    Parses the information from a cover art tuple (Used when )
-    :param covers_info:
-    :return:
-    """
-    tuple_len = len(covers_info)
-    if not (tuple_len == 3 or tuple_len == 2):
-        raise exception.InvalidCoversTupleError(f"Tuple {covers_info} is invalid. Must be of length 2 or 3")
-
-    covers_dir = cover_template = include_subfolders = None
-    if tuple_len == 2:
-        cover_template, covers_dir = covers_info
-        include_subfolders = True
-    elif tuple_len == 3:
-        cover_template, covers_dir, include_subfolders = covers_info
-
-    if not (isinstance(covers_dir, str) and isinstance(cover_template, str) and isinstance(include_subfolders, bool)):
-        raise exception.InvalidCoversTupleError(f"Tuple {covers_info} in invalid. The correct type is tuple[str, str, bool] or tuple[str, str]")
-    if not os.path.isdir(covers_dir):
-        raise exception.InvalidCoversDirectoryError(f"The specified covers directory is not a directory: {covers_dir}")
-
-    return cover_template, covers_dir, include_subfolders
-
-def extract_cover_art(mp3_path, dest_path_no_extension: str, show_output: bool) -> None:
+def extract_cover_art(mp3_path: str, dest_path_no_extension: str, show_output: bool) -> None:
     """
     Extracts the first cover art from an MP3 file and saves it to the destination folder.
     :param mp3_path: Path to the MP3 file.
-    :param dest_folder: Path to the destination folder and file (with no extension) where the cover art will be saved.
-    :return: None
+    :param dest_path_no_extension: Path to the destination folder and file (with no extension) where
+    the cover art will be saved.
+    :param show_output: Whether to include the console output
     """
 
     audio = MP3(mp3_path, ID3=ID3)
@@ -256,12 +228,19 @@ def extract_cover_art(mp3_path, dest_path_no_extension: str, show_output: bool) 
     if show_output:
         print(f"Successfully extracted cover art from MP3 with path '{mp3_path}' to file '{dest_path_full}'")
 
-def get_extension_from_mime(mime: str):
+
+def get_extension_from_mime(mime: str) -> str:
+    """
+    Gets the file extension of a file
+    :param mime: A string representing the mime type
+    :return: The extension or 'bin' if the mimetype cannot be guessed
+    """
     extension = mimetypes.guess_extension(mime)
     if extension:
         return extension
     else:
         return 'bin'  # Default if mimetype is unknown
+
 
 def is_valid_sub_file_name(name: str) -> bool:
     """
@@ -271,7 +250,15 @@ def is_valid_sub_file_name(name: str) -> bool:
     """
     return name == name.translate(INVALID_CHAR_TRANS)
 
-def get_valid_replacement(initial_val: str):
+
+def get_valid_replacement(initial_val: str) -> str:
+    """
+    Repeatedly prompts the user for a replacement string that does
+    not have invalid path characters.
+
+    :param initial_val: The initial string the user entered
+    :return: The new (user entered) value with no invalid path characters
+    """
     invalid_chars = get_invalid_filename_chars(initial_val)
     print(f"'{initial_val}' contains invalid path characters: {invalid_chars}")
     while True:
@@ -281,7 +268,18 @@ def get_valid_replacement(initial_val: str):
         invalid_chars = get_invalid_filename_chars(new_val)
         print(f"The entered name contains invalid path characters: {invalid_chars}")
 
-def get_invalid_filename_chars(name: str, string=True):
+
+def get_invalid_filename_chars(name: str, string=True) -> str | tuple[str]:
+    """
+    Gets the specific invalid characters that were used to help
+    show the user which characters were invalid
+
+    :param name: The string to be tested for invalid characters
+    :param string: A boolean for whether to return the result as
+        a string or as a tuple of the characters
+    :return: Either a tuple of characters or one string
+        representing the tuple
+    """
     invalid_chars = set()
     for char in name:
         if char in INVALID_CHAR_MAP:
@@ -293,4 +291,3 @@ def get_invalid_filename_chars(name: str, string=True):
         return ", ".join(wrapped_tuple)
     else:
         return invalid_tuple
-

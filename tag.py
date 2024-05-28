@@ -66,7 +66,7 @@ class Tag(Enum):
     def __str__(self):
         return self.name
 
-def check_tag_key(tag_key: Tag | str):
+def check_tag_key(tag_key: Tag | str) -> str | None:
     try:
         Tag(tag_key)
         if isinstance(tag_key, str):

@@ -51,7 +51,6 @@ class EasyMP3:
                              Note: Templates should not have a file extension at the end
         :param search_subfolders: Whether to include subfolders in the search
         :param show_output: Whether to show the console output
-        :return: None
         """
 
         if covers_dir is None:
@@ -84,7 +83,6 @@ class EasyMP3:
                          rename invalid filenames or have the user rename them as they
                          occur
         :param show_output: Whether to show the console output
-        :return: None
         """
         util.check_template(template_str)
         tag_list = tag.get_tag_list(string=False)
@@ -117,7 +115,6 @@ class EasyMP3:
                          ex. f"{Tag.TITLE} - {Tag.ARTIST}"
                          Note: A template should never end with .mp3 as this is implied
         :param show_output: Whether to show the console output
-        :return: None
         """
         util.check_template(template_str)
         for mp3_path in self._list:
@@ -137,11 +134,10 @@ class EasyMP3:
     def set_tags_from_dict(self, template_dict: dict[Tag, str], show_output=True) -> None:
         """
         Sets the same tags for all MP3 files based on a template dictionary.
-        :param: template_dict - A dictionary containing `Tag` keys and string values
+        :param template_dict - A dictionary containing `Tag` keys and string values
         :param show_output: Whether to show the console output
         :raise KeyError if no valid tags are found
         :raise InvalidTemplateDictError if the template dictionary has incorrect types or values
-        :return None
         """
 
         cover_art_key = False  # If cover art was in the template
@@ -157,7 +153,7 @@ class EasyMP3:
                 raise exception.InvalidTemplateDictError(
                     f"The value for key {Tag.COVER_ART} must be a string representing"
                     f"a path to a cover art image.\nInvalid value: {covers_info}")
-        valid_tags_dict: dict[Tag, str] = dict()
+        valid_tags_dict = dict()
 
         for key, value in template_dict.items():
 
@@ -193,7 +189,6 @@ class EasyMP3:
         :param rename_invalid: Whether to automatically rename invalid filenames or to prompt
                             the user for a new name every time an invalid filename is found
         :param show_output: Whether to show the console output
-        :return None
         """
         tag_list = tag.get_tag_list(string=False)
         os.makedirs(folder_path, exist_ok=True)
@@ -209,7 +204,6 @@ class EasyMP3:
         :param template: A traditional string template. Ex. f"{Tag.TITLE}"
         :param tag_list: A list of tags from the Tag class
         :param rename_invalid: Whether to rename invalid files automatically or prompt the user
-        :return None
         """
         audio = self._construct_easy_id3(mp3_path)
         new_name = template
@@ -233,7 +227,6 @@ class EasyMP3:
     def _reload_directory(self) -> None:
         """
         Internal method that resets the list of paths to mp3 files. Used after filenames are changed
-        :return: None
         """
         self._list = util.get_all_mp3s(self._directory, self._search_sub)
 
@@ -243,7 +236,6 @@ class EasyMP3:
         An internal method that adds cover art to a single MP3 file
         :param mp3_path: Path to the MP3 file.
         :param cover_path: Path to the cover image.
-        :return None
         """
         with open(cover_path, 'rb') as img:
             cover_data = img.read()
@@ -263,7 +255,7 @@ class EasyMP3:
         :param song_name: The name of the song to find a cover image for.
         :param covers_dir: The directory containing potential cover images.
         :param search_subfolders: Whether to include subfolders in the search.
-        :return The path to the cover art or None if one is not found
+        :return: The path to the cover art or None if one is not found
         """
         files = util.get_all_files(covers_dir, search_subfolders)
 
@@ -278,8 +270,9 @@ class EasyMP3:
         """
         Constructs an EasyID3 object for the given file path, creating new tags if necessary.
         :param path: Path to the MP3 file.
-        :return AN EasyID3 object for the file.
+        :return: An EasyID3 object for the file.
         """
+
         try:
             return EasyID3(path)
         except ID3NoHeaderError:
