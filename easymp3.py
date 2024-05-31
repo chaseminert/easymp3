@@ -16,7 +16,7 @@ COVER_FROM_FILENAME = "cover_from_filename"
 
 
 class EasyMP3:
-    def __init__(self, directory: str, search_subfolders=True):
+    def __init__(self, directory: str, search_subfolders=False):
         """
         Initializes the EasyMP3 object with a list of paths to MP3 files.
         :param directory: Path to the directory to search for MP3 files or a path
@@ -174,7 +174,7 @@ class EasyMP3:
             if show_output:
                 print(f"Tags from template dictionary successfully applied to MP3 with path '{mp3_path}'")
 
-    def extract_cover_arts(self, folder_path: str, template_str: str = f"{Tag.TITLE}",
+    def extract_cover_arts(self, folder_path: str, template_str: str | None = None,
                            rename_invalid=True, show_output=True) -> None:
         """
         Extracts the cover arts for all MP3 files
@@ -193,7 +193,10 @@ class EasyMP3:
         tag_list = tag.get_tag_list(string=False)
         os.makedirs(folder_path, exist_ok=True)
         for mp3_path in self._list:
-            cover_name_no_extension = self._new_name_from_template(mp3_path, template_str, tag_list, rename_invalid)
+            if template_str is None:
+                cover_name_no_extension = util.filename_no_extension(mp3_path)
+            else:
+                cover_name_no_extension = self._new_name_from_template(mp3_path, template_str, tag_list, rename_invalid)
             dest_path_no_extension = os.path.join(folder_path, cover_name_no_extension)
             util.extract_cover_art(mp3_path, dest_path_no_extension, show_output)
 
