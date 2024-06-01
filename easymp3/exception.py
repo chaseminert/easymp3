@@ -29,5 +29,6 @@ class InvalidTagError(EasyMP3Error):
 class InvalidCoversDirectoryError(EasyMP3Error):
     pass
 
+
 class InvalidCoverArtDataError(EasyMP3Error):
     pass
