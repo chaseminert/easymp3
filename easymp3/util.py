@@ -4,13 +4,14 @@ import re
 import sys
 from typing import Any
 
-from mutagen.id3 import ID3
+from mutagen.easyid3 import EasyID3
+from mutagen.id3 import ID3, APIC
 from mutagen.mp3 import MP3
 
-import tag
-from tag import Tag
+from . import tag
+from . import exception
+from .tag import Tag
 
-import exception
 
 INVALID_CHAR_MAP = {
     ":": "-",
@@ -182,6 +183,32 @@ def extract_info(template: str, input_string: str) -> dict[Tag, str] | None:
     else:
         return None
 
+def extract_tags(source_file: str, dest_file: str):
+    # Load the source MP3 file and read its tags
+    source_audio = MP3(source_file, ID3=EasyID3)
+    source_tags = source_audio.tags
+
+    # Load the destination MP3 file and initialize it for ID3 tags if not already present
+    dest_audio = MP3(dest_file, ID3=EasyID3)
+
+    # Clear existing tags in the destination file
+    dest_audio.delete()
+    dest_audio.save()
+
+    # Copy each tag from the source to the destination
+    for tag_key, tag_value in source_tags.items():
+        dest_audio[tag_key] = tag_value
+
+    # Copy the album art if present
+    source_id3 = ID3(source_file)
+    dest_id3 = ID3(dest_file)
+    for _tag in source_id3.values():
+        if isinstance(_tag, APIC):
+            dest_id3.add(_tag)
+
+    # Save the destination file with the new tags
+    dest_audio.save()
+    dest_id3.save(dest_file)
 
 def check_template(template: str) -> None:
     """

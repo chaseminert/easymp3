@@ -6,11 +6,12 @@ from mutagen.easyid3 import EasyID3
 from mutagen.id3 import APIC, ID3NoHeaderError, ID3
 from mutagen.mp3 import MP3
 
-import exception
-import tag
-import util
-from util import INVALID_CHAR_TRANS
-from tag import Tag
+from . import exception
+
+from . import tag
+from . import util
+from .util import INVALID_CHAR_TRANS
+from .tag import Tag
 
 COVER_FROM_FILENAME = "cover_from_filename"
 
