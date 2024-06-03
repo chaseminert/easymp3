@@ -2,16 +2,15 @@ import mimetypes
 import os
 import re
 import sys
-from typing import Any
+from typing import Any, Type, Union
 
 from mutagen.easyid3 import EasyID3
-from mutagen.id3 import ID3, APIC
+from mutagen.id3 import ID3, ID3NoHeaderError, APIC
 from mutagen.mp3 import MP3
 
-from . import tag
 from . import exception
+from . import tag
 from .tag import Tag
-
 
 INVALID_CHAR_MAP = {
     ":": "-",
@@ -151,6 +150,22 @@ def list_to_str(_list: list) -> str:
     return ", ".join(_list)
 
 
+def construct_mp3_obj(path: str, cls: Type[Union[EasyID3, ID3]] = EasyID3) -> EasyID3 | ID3:
+    """
+    Constructs an object for the given file path, creating new tags if necessary.
+    :param path: Path to the MP3 file.
+    :param cls: The class to create. Either EasyID3 or MP3
+    :return: An object for the file.
+    """
+
+    try:
+        return cls(path)
+    except ID3NoHeaderError:
+        audio_tags = cls()
+        audio_tags.save(path)
+        return cls(path)
+
+
 def extract_info(template: str, input_string: str) -> dict[Tag, str] | None:
     # Escape special regex characters in the template
     # Replace placeholders with named capture groups
@@ -183,32 +198,63 @@ def extract_info(template: str, input_string: str) -> dict[Tag, str] | None:
     else:
         return None
 
-def extract_tags(source_file: str, dest_file: str):
+
+def copy_tags(source_file: str, dest_file: str, tag_set: set[str] | None, complement: bool):
+    """
+    Copy the tags from one MP3 file to another
+    :param source_file: The file that will have its tags copied
+    :param dest_file: The file that will receive the tags
+    :param tag_set: A set of tags. Should be a set of values from the Tag class
+    :param complement: Whether to check if something is in the set, or check
+        if it is not in the set
+    """
+
     # Load the source MP3 file and read its tags
     source_audio = MP3(source_file, ID3=EasyID3)
-    source_tags = source_audio.tags
+    all_tags = source_audio.tags.items()
 
     # Load the destination MP3 file and initialize it for ID3 tags if not already present
     dest_audio = MP3(dest_file, ID3=EasyID3)
 
     # Clear existing tags in the destination file
-    dest_audio.delete()
-    dest_audio.save()
 
     # Copy each tag from the source to the destination
-    for tag_key, tag_value in source_tags.items():
-        dest_audio[tag_key] = tag_value
 
-    # Copy the album art if present
-    source_id3 = ID3(source_file)
-    dest_id3 = ID3(dest_file)
-    for _tag in source_id3.values():
-        if isinstance(_tag, APIC):
-            dest_id3.add(_tag)
+    if tag_set is None:
+        verified_tag_set = set()
+    else:
+        verified_tag_set = tag_set
 
+    for tag_key, tag_value in all_tags:
+        _test = tag_key in verified_tag_set
+        if complement:
+            _test = not _test  # If it's not in the set
+
+        if (tag_set is not None and _test) or tag_set is None:
+            dest_audio[tag_key] = tag_value
     # Save the destination file with the new tags
     dest_audio.save()
+
+
+    ca_in_set = Tag.COVER_ART.value in verified_tag_set
+    if complement:
+        ca_in_set = not ca_in_set
+
+    if tag_set is not None and (not ca_in_set):
+        return
+
+
+    src_id3 = construct_mp3_obj(source_file, cls=ID3)
+    dest_id3 = construct_mp3_obj(dest_file, cls=ID3)
+    for _tag in src_id3.values():
+        if isinstance(_tag, APIC):
+            dest_id3.add(_tag)
+    dest_audio.save()
     dest_id3.save(dest_file)
+
+
+
+
 
 def check_template(template: str) -> None:
     """
@@ -255,6 +301,31 @@ def extract_cover_art(mp3_path: str, dest_path_no_extension: str, show_output: b
     if show_output:
         print(f"Successfully extracted cover art from MP3 with path '{mp3_path}' to file '{dest_path_full}'")
 
+def apply_cover_art(mp3_path: str, cover_path: str):
+    """
+    Internal wrapper method that applies a cover art to a file
+    :param mp3_path: The path to an MP3 file
+    :param cover_path: The path to the cover art image
+    """
+    with open(cover_path, 'rb') as img:
+        cover_data = img.read()
+        mime_type = get_mime_type(cover_path, verify_image=True)
+
+    apply_cover_art_data(mp3_path, cover_data, mime_type)
+
+
+def apply_cover_art_data(mp3_path: str, cover_data, mime_type: str):
+    """
+    An internal method that adds cover art to a single MP3 file
+    :param mp3_path: Path to the MP3 file.
+    :param cover_data: The binary data for the cover art.
+    """
+
+    apic = APIC(encoding=3, mime=mime_type, type=3, desc='Cover', data=cover_data)
+
+    mp3_audio = MP3(mp3_path, ID3=ID3)
+    mp3_audio.tags.add(apic)
+    mp3_audio.save()
 
 def get_extension_from_mime(mime: str) -> str:
     """

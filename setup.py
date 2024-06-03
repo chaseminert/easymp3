@@ -5,7 +5,7 @@ with open('README.md', 'r') as f:
 
 setup(
     name='easymp3',
-    version='1.2',
+    version='1.2.1',
     packages=find_packages(),
     install_requires=[
         'mutagen==1.47.0'

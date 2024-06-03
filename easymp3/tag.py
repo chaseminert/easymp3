@@ -1,6 +1,8 @@
 import sys
 from enum import Enum
 
+from easymp3 import exception
+
 
 class Tag(Enum):
     ALBUM = 'album'
@@ -66,6 +68,7 @@ class Tag(Enum):
     def __str__(self):
         return self.name
 
+
 def check_tag_key(tag_key: Tag | str) -> str | None:
     try:
         Tag(tag_key)
@@ -75,12 +78,18 @@ def check_tag_key(tag_key: Tag | str) -> str | None:
             return tag_key.value
 
     except ValueError:
-        print(f"Invalid mp3 metadata field: {tag_key}", file=sys.stderr)
-        return None
+        raise exception.InvalidTagError(f"Invalid MP3 metadata field: {tag_key}")
 
 
-def get_tag_list(string=True):
-    if string:
-        return [str(tag_val) for tag_val in Tag if tag_val != Tag.COVER_ART]
+def get_tag_list(string=True, value=False, return_set=False):
+    if string and value:
+        tag_list = [tag_val.value for tag_val in Tag if tag_val != Tag.COVER_ART]
+    elif string:
+        tag_list = [str(tag_val) for tag_val in Tag if tag_val != Tag.COVER_ART]
     else:
-        return [tag_val for tag_val in Tag if tag_val != Tag.COVER_ART]
+        tag_list = [tag_val for tag_val in Tag if tag_val != Tag.COVER_ART]
+
+    if return_set:
+        return set(tag_list)
+    else:
+        return tag_list
