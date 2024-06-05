@@ -65,7 +65,25 @@ file_name_template = f"{Tag.TITLE} - {Tag.ARTIST}"
 tagger.set_tags_from_filename(file_name_template)
 ```
 
+### Copying Tags To Other MP3 Files
+For all MP3 files in the tagger object, their tags will be extracted to existing MP3
+files (of the same filename) in a specified directory. Ex. for all MP3 files in `songs_directory`,
+their tags will be copied to a file of the same name in `copy_directory`.
+
+```python
+from easymp3 import EasyMP3
+
+songs_directory = r"path\to\songs"
+copy_directory = r"path\to\other\directory"
+
+tagger = EasyMP3(songs_directory, search_subfolders=True)
+
+tagger.copy_tags(copy_directory)
+```
+
 ### Setting Cover Arts
+
+#### From Filename
 
 By specifying a directory for cover art images, cover art can be set for each MP3 file
 in the tagger object.
@@ -83,7 +101,8 @@ tagger = EasyMP3(songs_directory, search_subfolders=True)
 
 tagger.set_cover_art(covers_path)
 ```
-<br>
+#### From A Template
+
 Cover art can also be set by using a string template that represents
 how the cover images are named.
 
@@ -103,6 +122,8 @@ tagger = EasyMP3(songs_directory, search_subfolders=True)
 tagger.set_cover_art(covers_path, template_str)
 ```
 ### Extracting Cover Arts
+
+#### From Filename
 This will extract the cover art for all MP3 files in the tagger object
 and name them using the filename of the original MP3 file. For example, if an
 MP3 file is named `Fast - Juice WRLD.mp3`, then the cover image will be named
@@ -118,6 +139,7 @@ tagger = EasyMP3(songs_directory, search_subfolders=True)
 tagger.extract_cover_arts(extracted_covers_path)
 ```
 
+#### From A Template
 The filenames for extracted cover art can also be set using a string template.
 
 This will set all the extracted cover images as the template. For example, if MP3
@@ -140,7 +162,7 @@ tagger.extract_cover_arts(extracted_covers_path, template_str)
 This will remove all tags from all MP3 files in the tagger object.
 
 ```python
-from easymp3 import EasyMP3, Tag
+from easymp3 import EasyMP3
 
 songs_directory = r"path\to\songs"
 tagger = EasyMP3(songs_directory, search_subfolders=True)
