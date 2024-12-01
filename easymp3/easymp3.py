@@ -283,6 +283,10 @@ class EasyMP3:
         apic = APIC(encoding=3, mime=mime_type, type=3, desc='Cover', data=cover_data)
 
         mp3_audio = MP3(mp3_path, ID3=ID3)
+
+        if mp3_audio.tags is None:
+            mp3_audio.add_tags()
+
         mp3_audio.tags.add(apic)
         mp3_audio.save()
 
