@@ -46,7 +46,7 @@ songs_directory = r"path\to\songs"
 tagger = EasyMP3(songs_directory, search_subfolders=True)
 
 file_name_template = f"{Tag.TITLE} - {Tag.ARTIST}"
-tagger.set_filename_from_tags(file_name_template)
+tagger.set_tags_from_filename(file_name_template)
 ```
 
 ### Setting Filenames From Tags
@@ -62,7 +62,7 @@ songs_directory = r"path\to\songs"
 tagger = EasyMP3(songs_directory, search_subfolders=True)
 
 file_name_template = f"{Tag.TITLE} - {Tag.ARTIST}"
-tagger.set_tags_from_filename(file_name_template)
+tagger.set_filename_from_tags(file_name_template)
 ```
 
 ### Copying Tags To Other MP3 Files
