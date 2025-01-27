@@ -36,6 +36,7 @@ class Tag(Enum):
     LANGUAGE = 'language'
     GENRE = 'genre'
     DATE = 'date'
+    YEAR = 'date'  # In mutagen, year is simply called 'date'
     ORIGINALDATE = 'originaldate'
     PERFORMER = 'performer:*'
     MUSICBRAINZ_TRACKID = 'musicbrainz_trackid'
